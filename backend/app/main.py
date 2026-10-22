@@ -11,7 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
-from app.core.logging import setup_logging
+from contextlib import asynccontextmanager
+from app.core.logging import setup_logging, logger
+from app.db.session import SessionLocal, engine
+from app.db.base import Base
+from app.models import Dispute
+from app.services.seeder import seed_database
 from app.api.routes import (
     health,
     dashboard,
@@ -26,6 +31,22 @@ from app.api.routes import (
 
 setup_logging()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ensure database schema is created and initial seed fixtures exist on fresh deployments."""
+    try:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        if db.query(Dispute).count() == 0:
+            logger.info("Fresh deployment detected — seeding database with 50 RJ Kitchen dispute scenarios...")
+            seed_database(db, force_reset=False)
+        db.close()
+    except Exception as e:
+        logger.warning(f"Startup DB auto-init notification: {e}")
+    yield
+
+
 app = FastAPI(
     title="Chargeback & Dispute Copilot API",
     description="AI-Powered Payment Dispute Investigation, Evidence Intelligence & Resolution Platform",
@@ -33,6 +54,7 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
+    lifespan=lifespan,
 )
 
 # CORS Middleware
