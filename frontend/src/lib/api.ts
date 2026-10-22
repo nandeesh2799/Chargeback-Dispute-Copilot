@@ -86,6 +86,38 @@ export const api = {
 
   getIntegrationsStatus: () => request<any[]>("/integrations/status"),
 
+  getIntegrationConfig: () =>
+    request<{
+      dispute_source: string
+      razorpay_key_id: string
+      razorpay_key_secret_masked: string
+      razorpay_webhook_secret_masked: string
+      llm_provider: string
+      anthropic_api_key_masked: string
+    }>("/integrations/config"),
+
+  updateIntegrationConfig: (payload: {
+    dispute_source: string
+    razorpay_key_id?: string
+    razorpay_key_secret?: string
+    razorpay_webhook_secret?: string
+    llm_provider?: string
+    anthropic_api_key?: string
+  }) =>
+    request<{ success: boolean; message: string; config: any }>("/integrations/config", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+
+  testGatewayCredentials: (key_id: string, key_secret: string) =>
+    request<{ success: boolean; status_code: number; message: string }>(
+      "/integrations/test-credentials",
+      {
+        method: "POST",
+        body: JSON.stringify({ key_id, key_secret }),
+      }
+    ),
+
   resetDemoData: () => request<{ success: boolean; message: string; disputes_seeded: number }>("/settings/demo-reset", {
     method: "POST",
   }),

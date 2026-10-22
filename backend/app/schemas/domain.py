@@ -265,3 +265,18 @@ class ModelEvaluationMetrics(BaseModel):
     calibration_curve: List[Dict[str, float]]
     feature_importances: List[Dict[str, Any]]
     sample_size_warning: Optional[str] = None
+
+
+class IntegrationUpdateRequest(BaseModel):
+    dispute_source: str = "mock"
+    razorpay_key_id: Optional[str] = None
+    razorpay_key_secret: Optional[str] = None
+    razorpay_webhook_secret: Optional[str] = None
+    llm_provider: Optional[str] = "fallback"
+    anthropic_api_key: Optional[str] = None
+
+
+class TestConnectionRequest(BaseModel):
+    key_id: str
+    key_secret: str
+
