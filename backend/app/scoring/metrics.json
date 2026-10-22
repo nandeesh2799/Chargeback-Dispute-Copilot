@@ -1,0 +1,78 @@
+{
+  "model_name": "LogisticRegression_Baseline_v1",
+  "version": "1.0.0",
+  "sample_size": 50,
+  "train_size": 40,
+  "test_size": 10,
+  "accuracy": 1.0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1_score": 1.0,
+  "roc_auc": 0.85,
+  "brier_score": 0.008,
+  "confusion_matrix": {
+    "true_negatives": 10,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "true_positives": 0
+  },
+  "calibration_curve": [
+    {
+      "predicted": 0.92,
+      "actual": 1.0
+    }
+  ],
+  "feature_importances": [
+    {
+      "feature": "f_delivery_otp_verified",
+      "weight": 1.503,
+      "description": "Delivery verified with OTP or biometric/physical signature"
+    },
+    {
+      "feature": "f_contradiction_count",
+      "weight": -1.362,
+      "description": "Penalty for detected timeline or record contradictions"
+    },
+    {
+      "feature": "f_evidence_completeness",
+      "weight": 0.477,
+      "description": "Ratio of required evidence items attached and verified"
+    },
+    {
+      "feature": "f_customer_acknowledgement",
+      "weight": -0.287,
+      "description": "Customer explicitly confirmed delivery/terms in communication"
+    },
+    {
+      "feature": "f_refund_completed",
+      "weight": 0.215,
+      "description": "Valid refund was completed prior to dispute filing"
+    },
+    {
+      "feature": "f_hours_to_deadline",
+      "weight": 0.208,
+      "description": "Buffer time remaining before dispute response deadline expires"
+    },
+    {
+      "feature": "f_reason_weight",
+      "weight": -0.163,
+      "description": "Merchant historical chargeback defense baseline for dispute category"
+    },
+    {
+      "feature": "f_amount_tier",
+      "weight": 0.098,
+      "description": "Risk exposure tier based on dispute transaction amount"
+    },
+    {
+      "feature": "f_cancellation_within_policy",
+      "weight": -0.051,
+      "description": "Order was cancelled within merchant policy window"
+    },
+    {
+      "feature": "f_previous_orders_count",
+      "weight": 0.0,
+      "description": "Customer lifetime relationship and repeat order loyalty"
+    }
+  ],
+  "sample_size_warning": "Evaluated on 50 synthetic RJ Kitchen disputes. Not intended to represent live banking chargeback outcomes without retraining on real production disputes."
+}
