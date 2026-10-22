@@ -130,19 +130,20 @@ class DisputeRepository:
                 "win_probability_score": d.win_probability_score
             })
 
-        # Recent 7-day trend
-        trend_buckets: Dict[str, Dict[str, int]] = {}
+        # Recent 7-day trend (chronologically sorted by date key)
+        trend_buckets: Dict[str, Dict[str, Any]] = {}
         for d in all_disputes:
-            day_str = d.created_at.strftime("%b %d")
-            if day_str not in trend_buckets:
-                trend_buckets[day_str] = {"date": day_str, "opened": 0, "won": 0, "lost": 0}
-            trend_buckets[day_str]["opened"] += 1
+            date_key = d.created_at.strftime("%Y-%m-%d")
+            if date_key not in trend_buckets:
+                trend_buckets[date_key] = {"date": d.created_at.strftime("%b %d"), "opened": 0, "won": 0, "lost": 0}
+            trend_buckets[date_key]["opened"] += 1
             if d.status == DisputeStatus.WON:
-                trend_buckets[day_str]["won"] += 1
+                trend_buckets[date_key]["won"] += 1
             elif d.status == DisputeStatus.LOST:
-                trend_buckets[day_str]["lost"] += 1
+                trend_buckets[date_key]["lost"] += 1
 
-        trend_list = list(trend_buckets.values())[-7:]
+        sorted_keys = sorted(trend_buckets.keys())[-7:]
+        trend_list = [trend_buckets[k] for k in sorted_keys]
 
         return {
             "total_disputes": total_disputes,

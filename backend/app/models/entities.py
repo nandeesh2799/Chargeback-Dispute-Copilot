@@ -1,11 +1,15 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from sqlalchemy import (
-    String, BigInteger, Integer, Float, Boolean, Text, JSON, DateTime, ForeignKey, Enum as SQLEnum
+    String, BigInteger, Integer, Float, Boolean, Text, JSON, DateTime, ForeignKey, Enum as SQLEnum, Index
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class UserRole(str, enum.Enum):
@@ -120,8 +124,8 @@ class Merchant(Base):
     legal_entity_name: Mapped[str] = mapped_column(String(255), nullable=False)
     default_currency: Mapped[str] = mapped_column(String(3), default="INR")
     timezone: Mapped[str] = mapped_column(String(64), default="Asia/Kolkata")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     users: Mapped[List["User"]] = relationship(back_populates="merchant", cascade="all, delete-orphan")
     orders: Mapped[List["Order"]] = relationship(back_populates="merchant", cascade="all, delete-orphan")
@@ -138,7 +142,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole), default=UserRole.RISK_ANALYST)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     merchant: Mapped["Merchant"] = relationship(back_populates="users")
 
@@ -153,7 +157,7 @@ class Customer(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     orders: Mapped[List["Order"]] = relationship(back_populates="customer")
     disputes: Mapped[List["Dispute"]] = relationship(back_populates="customer")
@@ -171,7 +175,7 @@ class Order(Base):
     currency: Mapped[str] = mapped_column(String(3), default="INR")
     status: Mapped[OrderStatus] = mapped_column(SQLEnum(OrderStatus), default=OrderStatus.FULFILLED)
     item_summary: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
-    ordered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    ordered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     cancellation_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
@@ -240,7 +244,7 @@ class CustomerMessage(Base):
     channel: Mapped[str] = mapped_column(String(16), default="chat")        # chat, email, sms
     sender_name: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     dispute: Mapped[Optional["Dispute"]] = relationship(back_populates="customer_messages")
 
@@ -270,8 +274,8 @@ class Dispute(Base):
     contested_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     merchant: Mapped["Merchant"] = relationship(back_populates="disputes")
     payment: Mapped["Payment"] = relationship(back_populates="disputes")
@@ -301,7 +305,7 @@ class EvidenceItem(Base):
     sha256_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     verification_status: Mapped[EvidenceVerificationStatus] = mapped_column(SQLEnum(EvidenceVerificationStatus), default=EvidenceVerificationStatus.VERIFIED)
     source: Mapped[EvidenceSource] = mapped_column(SQLEnum(EvidenceSource), default=EvidenceSource.POS_SYSTEM)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     links: Mapped[List["EvidenceLink"]] = relationship(back_populates="evidence_item", cascade="all, delete-orphan")
 
@@ -315,7 +319,7 @@ class EvidenceLink(Base):
     evidence_id: Mapped[str] = mapped_column(String(64), ForeignKey("evidence_items.id"), nullable=False)
     linked_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     relevance_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    linked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    linked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     dispute: Mapped["Dispute"] = relationship(back_populates="evidence_links")
     evidence_item: Mapped["EvidenceItem"] = relationship(back_populates="links")
@@ -336,8 +340,8 @@ class AIInvestigation(Base):
     model_provider: Mapped[str] = mapped_column(String(64), default="deterministic_fallback")
     model_version: Mapped[str] = mapped_column(String(64), default="v1.0")
     execution_duration_ms: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     dispute: Mapped["Dispute"] = relationship(back_populates="investigation")
 
@@ -355,8 +359,8 @@ class ResponseDraft(Base):
     is_approved: Mapped[bool] = mapped_column(Boolean, default=False)
     approved_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     last_edited_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     dispute: Mapped["Dispute"] = relationship(back_populates="drafts")
 
@@ -377,7 +381,7 @@ class ScoringResult(Base):
     feature_vector: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     is_calibrated: Mapped[bool] = mapped_column(Boolean, default=True)
     calibration_note: Mapped[str] = mapped_column(Text, default="Trained on deterministic merchant feature baseline.")
-    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     dispute: Mapped["Dispute"] = relationship(back_populates="scoring")
 
@@ -391,7 +395,7 @@ class DisputeOutcome(Base):
     outcome: Mapped[str] = mapped_column(String(32), nullable=False)  # won, lost, accepted_by_merchant
     amount_deducted: Mapped[int] = mapped_column(BigInteger, default=0)
     fee_deducted: Mapped[int] = mapped_column(BigInteger, default=0)
-    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     resolution_remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     dispute: Mapped["Dispute"] = relationship(back_populates="outcome")
@@ -425,7 +429,7 @@ class WebhookEvent(Base):
     signature_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     processing_status: Mapped[str] = mapped_column(String(32), default="pending")
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -441,4 +445,13 @@ class AuditLog(Base):
     resource_id: Mapped[str] = mapped_column(String(64), nullable=False)
     details: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     ip_address: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+# Performance indexes for common query patterns
+Index("ix_disputes_status", Dispute.status)
+Index("ix_disputes_reason_code", Dispute.reason_code)
+Index("ix_disputes_response_deadline", Dispute.response_deadline)
+Index("ix_disputes_merchant_id", Dispute.merchant_id)
+Index("ix_disputes_created_at", Dispute.created_at)
+Index("ix_disputes_evidence_readiness", Dispute.evidence_readiness)

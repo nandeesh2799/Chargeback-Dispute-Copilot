@@ -122,5 +122,7 @@ export const api = {
     method: "POST",
   }),
 
+  getAuditLogs: (limit = 50) => request<any[]>(`/settings/audit-logs?limit=${limit}`),
+
   getPdfReportUrl: (id: string) => `/api/disputes/${id}/report`,
 }

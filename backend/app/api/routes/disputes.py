@@ -30,12 +30,17 @@ def list_disputes(
     search: Optional[str] = None,
     sort_by: str = "created_at",
     sort_dir: str = "desc",
+    response: Response = None,
     db: Session = Depends(get_db_session)
 ):
-    disputes, _ = DisputeRepository.get_disputes(
+    disputes, total = DisputeRepository.get_disputes(
         db, skip=skip, limit=limit, status=status, reason=reason,
         readiness=readiness, search=search, sort_by=sort_by, sort_dir=sort_dir
     )
+
+    if response:
+        response.headers["X-Total-Count"] = str(total)
+        response.headers["Access-Control-Expose-Headers"] = "X-Total-Count"
 
     results = []
     for d in disputes:
@@ -298,6 +303,7 @@ def calculate_score(dispute_id: str, db: Session = Depends(get_db_session)):
     existing_score = db.query(ScoringResult).filter(ScoringResult.dispute_id == dispute_id).first()
     if existing_score:
         existing_score.score = score_data["score"]
+        existing_score.tier = score_data["tier"]
         existing_score.top_positive_factors = score_data["top_positive_factors"]
         existing_score.top_negative_factors = score_data["top_negative_factors"]
         existing_score.feature_vector = score_data["feature_vector"]
@@ -319,6 +325,7 @@ def calculate_score(dispute_id: str, db: Session = Depends(get_db_session)):
         db.add(existing_score)
 
     d.win_probability_score = score_data["score"]
+    d.win_score_tier = score_data["tier"]
     db.commit()
 
     return {
@@ -370,6 +377,20 @@ def submit_contest(dispute_id: str, db: Session = Depends(get_db_session)):
     d = DisputeRepository.get_dispute_by_id(db, dispute_id)
     if not d:
         raise HTTPException(status_code=404, detail="Dispute not found")
+
+    # State-machine guard: only contestable statuses may proceed
+    contestable_statuses = {
+        DisputeStatus.OPEN,
+        DisputeStatus.UNDER_REVIEW,
+        DisputeStatus.EVIDENCE_READY,
+        DisputeStatus.CONTESTED,
+    }
+    if d.status not in contestable_statuses:
+        status_val = d.status.value if hasattr(d.status, "value") else str(d.status)
+        raise HTTPException(
+            status_code=409,
+            detail=f"Dispute cannot be contested in status '{status_val}'. Must be open, under_review, evidence_ready, or contested."
+        )
 
     latest_draft = d.drafts[-1] if d.drafts else None
     summary = latest_draft.contest_summary if latest_draft else "Merchant contests dispute with attached proof of delivery."

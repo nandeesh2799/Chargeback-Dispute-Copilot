@@ -87,8 +87,13 @@ class ExplainableScoringPipeline:
         amt_paise = dispute.amount
         amt_tier = 1.0 if amt_paise < 40000 else (2.0 if amt_paise <= 80000 else 3.0)
 
-        # 9. Previous orders
-        prev_orders = 2.0  # normalized estimate
+        # 9. Previous orders (grounded in customer orders relationship or interaction history)
+        if dispute and getattr(dispute, "customer", None) and getattr(dispute.customer, "orders", None):
+            prev_orders = float(max(1, len(dispute.customer.orders)))
+        elif messages:
+            prev_orders = min(5.0, float(len(messages)))
+        else:
+            prev_orders = 1.0
 
         # 10. Reason weight baseline
         reason_weights = {

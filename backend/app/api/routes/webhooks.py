@@ -29,6 +29,7 @@ async def handle_razorpay_webhook(
             raise HTTPException(status_code=400, detail="Invalid webhook signature")
     else:
         # In mock/development mode without secret configured, log warning
+        logger.warning("RAZORPAY_WEBHOOK_SECRET not configured: webhook signature verification bypassed for development mode.")
         sig_verified = True
 
     try:
@@ -68,32 +69,47 @@ async def handle_razorpay_webhook(
         ).first()
 
         if dispute:
+            existing_outcome = db.query(DisputeOutcome).filter(DisputeOutcome.dispute_id == dispute.id).first()
             if event_type == "dispute.won":
                 dispute.status = DisputeStatus.WON
                 dispute.closed_at = datetime.now(timezone.utc)
-                outcome = DisputeOutcome(
-                    id=f"out_{uuid.uuid4().hex[:12]}",
-                    dispute_id=dispute.id,
-                    outcome="won",
-                    amount_deducted=0,
-                    fee_deducted=0,
-                    decided_at=datetime.now(timezone.utc),
-                    resolution_remarks="Card scheme ruled in merchant favor (Webhook Event)"
-                )
-                db.add(outcome)
+                if existing_outcome:
+                    existing_outcome.outcome = "won"
+                    existing_outcome.amount_deducted = 0
+                    existing_outcome.fee_deducted = 0
+                    existing_outcome.decided_at = datetime.now(timezone.utc)
+                    existing_outcome.resolution_remarks = "Card scheme ruled in merchant favor (Webhook Event)"
+                else:
+                    outcome = DisputeOutcome(
+                        id=f"out_{uuid.uuid4().hex[:12]}",
+                        dispute_id=dispute.id,
+                        outcome="won",
+                        amount_deducted=0,
+                        fee_deducted=0,
+                        decided_at=datetime.now(timezone.utc),
+                        resolution_remarks="Card scheme ruled in merchant favor (Webhook Event)"
+                    )
+                    db.add(outcome)
             elif event_type == "dispute.lost":
                 dispute.status = DisputeStatus.LOST
                 dispute.closed_at = datetime.now(timezone.utc)
-                outcome = DisputeOutcome(
-                    id=f"out_{uuid.uuid4().hex[:12]}",
-                    dispute_id=dispute.id,
-                    outcome="lost",
-                    amount_deducted=dispute.amount,
-                    fee_deducted=15000,
-                    decided_at=datetime.now(timezone.utc),
-                    resolution_remarks="Cardholder chargeback upheld by card issuer (Webhook Event)"
-                )
-                db.add(outcome)
+                if existing_outcome:
+                    existing_outcome.outcome = "lost"
+                    existing_outcome.amount_deducted = dispute.amount
+                    existing_outcome.fee_deducted = 15000
+                    existing_outcome.decided_at = datetime.now(timezone.utc)
+                    existing_outcome.resolution_remarks = "Cardholder chargeback upheld by card issuer (Webhook Event)"
+                else:
+                    outcome = DisputeOutcome(
+                        id=f"out_{uuid.uuid4().hex[:12]}",
+                        dispute_id=dispute.id,
+                        outcome="lost",
+                        amount_deducted=dispute.amount,
+                        fee_deducted=15000,
+                        decided_at=datetime.now(timezone.utc),
+                        resolution_remarks="Cardholder chargeback upheld by card issuer (Webhook Event)"
+                    )
+                    db.add(outcome)
             elif event_type == "dispute.closed":
                 dispute.status = DisputeStatus.CLOSED
                 dispute.closed_at = datetime.now(timezone.utc)

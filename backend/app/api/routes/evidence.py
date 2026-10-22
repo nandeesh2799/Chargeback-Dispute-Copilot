@@ -1,5 +1,6 @@
 import os
 import uuid
+import hashlib
 from typing import List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -43,6 +44,14 @@ def get_dispute_evidence(dispute_id: str, db: Session = Depends(get_db_session))
     return results
 
 
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".csv", ".txt", ".json", ".doc", ".docx"}
+ALLOWED_MIME_TYPES = {
+    "application/pdf", "image/png", "image/jpeg", "image/jpg",
+    "text/csv", "text/plain", "application/json",
+    "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+}
+
+
 @router.post("/disputes/{dispute_id}/evidence", response_model=EvidenceLinkSchema)
 async def upload_evidence(
     dispute_id: str,
@@ -60,12 +69,16 @@ async def upload_evidence(
     file_path = None
     file_size = 0
     mime_type = "application/octet-stream"
+    sha256_hash = None
 
-    if file:
+    if file and file.filename:
         clean_name = sanitize_filename(file.filename)
-        ext = os.path.splitext(clean_name)[1]
-        unique_name = f"{uuid.uuid4().hex}{ext}"
-        target_path = safe_join_path(settings.UPLOAD_DIR, unique_name)
+        ext = os.path.splitext(clean_name)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File extension '{ext}' is not permitted. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+            )
 
         content = await file.read()
         file_size = len(content)
@@ -74,24 +87,42 @@ async def upload_evidence(
         if file_size > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
             raise HTTPException(status_code=400, detail=f"File exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE_MB}MB")
 
+        mime_type = file.content_type or "application/octet-stream"
+        if mime_type not in ALLOWED_MIME_TYPES and mime_type != "application/octet-stream":
+            raise HTTPException(
+                status_code=400,
+                detail=f"MIME type '{mime_type}' is not allowed for evidence attachments."
+            )
+
+        sha256_hash = hashlib.sha256(content).hexdigest()
+
+        unique_name = f"{uuid.uuid4().hex}{ext}"
+        target_path = safe_join_path(settings.UPLOAD_DIR, unique_name)
+
         with open(target_path, "wb") as f:
             f.write(content)
 
         file_name = clean_name
         file_path = f"/uploads/{unique_name}"
-        mime_type = file.content_type or mime_type
+
+    resolved_evidence_type = (
+        EvidenceType(evidence_type)
+        if evidence_type in [e.value for e in EvidenceType]
+        else EvidenceType.OTHER
+    )
 
     evi_id = f"evi_{uuid.uuid4().hex[:12]}"
     evi_item = EvidenceItem(
         id=evi_id,
         merchant_id=dispute.merchant_id,
-        evidence_type=EvidenceType(evidence_type) if evidence_type in EvidenceType.__members__.values() else EvidenceType.OTHER,
+        evidence_type=resolved_evidence_type,
         title=title,
         description=description,
         file_path=file_path,
         file_name=file_name,
         file_size_bytes=file_size,
         mime_type=mime_type,
+        sha256_hash=sha256_hash,
         verification_status=EvidenceVerificationStatus.VERIFIED,
         source=EvidenceSource.MANUAL_UPLOAD,
         created_at=datetime.now(timezone.utc)

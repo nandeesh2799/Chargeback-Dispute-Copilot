@@ -57,7 +57,7 @@ export const SettingsView: React.FC = () => {
 
   const { data: auditLogs, isLoading: logsLoading } = useQuery({
     queryKey: ["audit-logs"],
-    queryFn: () => fetch("/api/settings/audit-logs").then((res) => res.json()),
+    queryFn: () => api.getAuditLogs(50),
   })
 
   // Save mutation
@@ -74,7 +74,8 @@ export const SettingsView: React.FC = () => {
     onSuccess: (res) => {
       setSaveSuccessMsg(res.message)
       setTimeout(() => setSaveSuccessMsg(null), 4000)
-      queryClient.invalidateQueries()
+      queryClient.invalidateQueries({ queryKey: ["integration-config"] })
+      queryClient.invalidateQueries({ queryKey: ["audit-logs"] })
     },
   })
 

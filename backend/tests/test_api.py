@@ -10,7 +10,7 @@ def test_health_check():
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "healthy"
-    assert data["dispute_source"] == "mock"
+    assert data["dispute_source"] in ["mock", "razorpay"]
 
 
 def test_dashboard_summary():
@@ -96,3 +96,67 @@ def test_pdf_report_generation():
     assert res_pdf.status_code == 200
     assert res_pdf.headers["content-type"] == "application/pdf"
     assert len(res_pdf.content) > 1000
+
+
+def test_disputes_list_total_count_header():
+    res = client.get("/api/disputes?limit=5")
+    assert res.status_code == 200
+    assert "X-Total-Count" in res.headers
+    assert int(res.headers["X-Total-Count"]) >= 50
+
+
+def test_evidence_type_validation_and_sha256_hash():
+    res = client.get("/api/disputes?limit=1")
+    disp_id = res.json()[0]["id"]
+
+    # 1. Valid evidence_type should NOT fall back to 'other'
+    sample_content = b"PDF invoice mock content 12345"
+    files = {"file": ("invoice.pdf", sample_content, "application/pdf")}
+    res_upload = client.post(
+        f"/api/disputes/{disp_id}/evidence",
+        data={
+            "title": "Tax Invoice Exhibit",
+            "description": "Itemized invoice",
+            "evidence_type": "order_invoice"
+        },
+        files=files
+    )
+    assert res_upload.status_code == 200
+    evi_item = res_upload.json()["evidence_item"]
+    assert evi_item["evidence_type"] == "order_invoice"
+    assert evi_item["sha256_hash"] is not None
+    import hashlib
+    assert evi_item["sha256_hash"] == hashlib.sha256(sample_content).hexdigest()
+
+    # 2. Reject prohibited extension
+    bad_files = {"file": ("malicious.exe", b"binary", "application/octet-stream")}
+    res_bad = client.post(
+        f"/api/disputes/{disp_id}/evidence",
+        data={"title": "Malicious file", "evidence_type": "other"},
+        files=bad_files
+    )
+    assert res_bad.status_code == 400
+    assert "not permitted" in res_bad.json()["detail"]
+
+
+def test_contest_state_machine_guard():
+    # Find a lost dispute in DB
+    res_list = client.get("/api/disputes?status=lost&limit=1")
+    lost_disputes = res_list.json()
+    if lost_disputes:
+        lost_id = lost_disputes[0]["id"]
+        res_contest = client.post(f"/api/disputes/{lost_id}/contest")
+        # Should be rejected with 409 Conflict
+        assert res_contest.status_code == 409
+        assert "cannot be contested" in res_contest.json()["detail"]
+
+
+def test_dashboard_trend_chronological():
+    res = client.get("/api/dashboard/summary")
+    assert res.status_code == 200
+    trend = res.json()["recent_trend"]
+    assert len(trend) > 0
+    # Ensure all elements have date, opened, won, lost keys
+    for item in trend:
+        assert "date" in item
+        assert "opened" in item

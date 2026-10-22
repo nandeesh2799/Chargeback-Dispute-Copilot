@@ -1,3 +1,5 @@
+import os
+import shutil
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 import httpx
@@ -140,6 +142,33 @@ def update_integration_config(payload: IntegrationUpdateRequest, db: Session = D
     )
     db.add(audit)
     db.commit()
+
+    # Persist updated values to .env so changes survive restarts
+    try:
+        from dotenv import set_key
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+        env_file_path = os.path.join(project_root, ".env")
+        if not os.path.exists(env_file_path):
+            example_path = os.path.join(project_root, ".env.example")
+            if os.path.exists(example_path):
+                shutil.copyfile(example_path, env_file_path)
+            else:
+                with open(env_file_path, "w") as f:
+                    pass
+
+        set_key(env_file_path, "DISPUTE_SOURCE", settings.DISPUTE_SOURCE)
+        if payload.razorpay_key_id is not None:
+            set_key(env_file_path, "RAZORPAY_KEY_ID", settings.RAZORPAY_KEY_ID)
+        if payload.razorpay_key_secret:
+            set_key(env_file_path, "RAZORPAY_KEY_SECRET", settings.RAZORPAY_KEY_SECRET)
+        if payload.razorpay_webhook_secret:
+            set_key(env_file_path, "RAZORPAY_WEBHOOK_SECRET", settings.RAZORPAY_WEBHOOK_SECRET)
+        if payload.llm_provider:
+            set_key(env_file_path, "LLM_PROVIDER", settings.LLM_PROVIDER)
+        if payload.anthropic_api_key:
+            set_key(env_file_path, "ANTHROPIC_API_KEY", settings.ANTHROPIC_API_KEY)
+    except Exception as e:
+        logger.warning(f"Could not write settings to .env file: {e}")
 
     return {
         "success": True,
