@@ -1,5 +1,14 @@
 # Chargeback & Dispute Copilot
 
+[![CI Pipeline](https://github.com/nandeesh2799/Chargeback-Dispute-Copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/nandeesh2799/Chargeback-Dispute-Copilot/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.2-3178C6?logo=typescript&logoColor=white)
+![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-1.4+-F7931E?logo=scikit-learn&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-100%25%20Passing-brightgreen?logo=pytest)
+
 > **An AI-Powered Payment Dispute Investigation, Evidence Intelligence & Resolution Platform**
 > Built for online merchants, specialized for **RJ Kitchen** (cloud kitchen operations). Bridges payment gateways, courier telematics, explainable machine learning win-probability scoring, and an auditable 10-step AI investigation agent.
 

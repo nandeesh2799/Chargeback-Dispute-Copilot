@@ -4,7 +4,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: Dockerfile
     container_name: chargeback-dispute-copilot
     ports:
       - "8000:8000"
@@ -15,6 +15,12 @@ services:
       - DATABASE_URL=sqlite:///./copilot.db
       - DISPUTE_SOURCE=mock
       - LLM_PROVIDER=fallback
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
