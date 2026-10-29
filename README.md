@@ -251,3 +251,15 @@ Open your browser at **`http://localhost:8000`** (or **`http://localhost:5173`**
 - **Model Calibration on Synthetic Data**: The baseline Logistic Regression model is evaluated on 50 synthetic RJ Kitchen disputes. Calibration metrics are displayed with appropriate sample-size caveats and must be re-calibrated on real-world bank dispute outcomes before production underwriting.
 - **Razorpay Test Mode Dispute Generation**: In Razorpay test mode, dispute creation is simulated because gateway test sandboxes do not support arbitrary chargeback generation on demand.
 - **Future Enhancements**: Multi-merchant tenancy, automated delivery courier webhook listeners (Dunzo / Shadowfax / Delhivery), and WhatsApp notification dispatch for customer receipt acknowledgments.
+
+
+---
+
+## 👨‍💻 Author & Engineering Showcase
+
+**Nandeesh N K**  
+Full-Stack Developer & AI Systems Engineer — Bengaluru, India  
+- 🌐 **Interactive Portfolio:** [NandeeshOS (Live Demo)](https://nandeesh2799-portfolio.vercel.app)
+- 💼 **LinkedIn:** [linkedin.com/in/nandeesh-n-k-729773270](https://linkedin.com/in/nandeesh-n-k-729773270)
+- 🐙 **GitHub Profile:** [github.com/nandeesh2799](https://github.com/nandeesh2799)
+- 📫 **Direct Email:** [nandeeshnk506@gmail.com](mailto:nandeeshnk506@gmail.com)
